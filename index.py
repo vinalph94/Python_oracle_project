@@ -55,6 +55,27 @@ class sql_objects:
             conn.execute("select * from (SELECT Name, COUNT(Name) AS times FROM AXP2009.FALL22_S001_13_PUBLISHER fsp, AXP2009.FALL22_S001_13_PUBLISHED_BY fspb, AXP2009.FALL22_S001_13_BORROW_RECORD fsbr WHERE fsp.PUBLISHER_ID = fspb.PUBLISHER_ID AND fspb.BOOK_ID = fsbr.BOOK_ID GROUP BY NAME) where times=(select Max(times) from (SELECT Name, COUNT(Name) AS times FROM AXP2009.FALL22_S001_13_PUBLISHER fsp, AXP2009.FALL22_S001_13_PUBLISHED_BY fspb, AXP2009.FALL22_S001_13_BORROW_RECORD fsbr WHERE fsp.PUBLISHER_ID = fspb.PUBLISHER_ID AND fspb.BOOK_ID = fsbr.BOOK_ID GROUP BY NAME))")
             rows = conn.fetchall()
             print(tabulate(rows, showindex=False, headers=['NAME', 'TIMES'], tablefmt='psql'))
+
+    def pl.getAverageLateFee(self,conn):
+
+        try:
+            conn.execute("SELECT DATE_OF_ISSUE, round(AVG(late_fee) OVER (ORDER BY DATE_OF_ISSUE ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING),2) as AVG_LATE_FEE from AXP2009.FALL22_S001_13_BORROW_RECORD fsbr") 
+            rows = conn.fetchall()
+            print(tabulate(rows, showindex=False, headers=['DATE_OF_ISSUE'],tablefmt='psql'))
+
+    def pl.getTotalLateFee(self,conn):
+
+        try:
+            conn.execute("SELECT fsbr.BOOK_ID, fsbr.DATE_OF_ISSUE, SUM(fsbr.LATE_FEE) FROM FALL22_S001_13_BORROW_RECORD fsbr INNER JOIN FALL22_S001_13_BOOKS fsb ON fsbr.BOOK_ID = fsb.BOOK_ID GROUP BY fsbr.BOOK_ID, ROLLUP(fsbr.DATE_OF_ISSUE)") 
+            rows = conn.fetchall()
+            print(tabulate(rows, showindex=False, headers=['BOOK_ID','DATE_OF_ISSUE','LATE_FEE'],tablefmt='psql'))  
+
+    def pl.getCountForQuarter(self,conn):
+
+        try:
+            conn.execute("SELECT fss.FNAME, TO_CHAR(fsb.REGISTERED_BOOK_ON, 'Q') AS "QUARTER", fsb.GENRE, COUNT(*) FROM FALL22_S001_13_BOOKS fsb INNER JOIN FALL22_S001_13_STAFF fss ON fss.STAFF_ID = fsb.STAFF_ID GROUP BY TO_CHAR(fsb.REGISTERED_BOOK_ON, 'Q'), fss.FNAME, ROLLUP(fsb.GENRE) FETCH NEXT 10 ROWS ONLY") 
+            rows = conn.fetchall()
+            print(tabulate(rows, showindex=False, headers=['FNAME','GENRE'],tablefmt='psql'))                          
            
         except cx_Oracle.DatabaseError as er:
             print('There is error in the Oracle database:', er)
@@ -93,6 +114,15 @@ while True:
 
         elif choice2 == 3:
             p1.getMostBorrowedPublisher(conn)
+
+        elif choice2 == 4:
+            pl.getAverageLateFee(conn) 
+
+        elif choice2 == 5:
+            pl.getTotalLateFee(conn)
+            
+        elif choice2 == 6:
+            pl.getCountForQuarter(conn)    
             
         else:
             p1.close_connection(conn)
