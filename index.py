@@ -25,7 +25,8 @@ class sql_objects:
         try:
             conn.execute("SELECT * FROM AXP2009." + table_name + " FETCH FIRST 25 ROWS ONLY")
             rows = conn.fetchall()
-            print(tabulate(rows, showindex=False, tablefmt='psql'))
+            col_names = [i[0] for i in conn.description]
+            print(tabulate(rows, headers=col_names, showindex=False, tablefmt='psql'))
         except cx_Oracle.DatabaseError as er:
             print('There is error in the Oracle database:', er)
  
@@ -53,9 +54,7 @@ class sql_objects:
             fee = input("\nEnter the value for total fee :")
             conn.execute("SELECT Fname, Lname, fss.student_ID, sum(LATE_FEE) AS Total_Penalty FROM AXP2009.FALL22_S001_13_STUDENTS fss, AXP2009.FALL22_S001_13_BORROW_RECORD fsbr WHERE fss.student_ID = fsbr.STUDENT_ID  GROUP BY Fname, Lname, fss.student_ID HAVING sum(LATE_FEE) >= :amount ORDER BY sum(LATE_FEE) DESC", {'amount': fee})
             rows = conn.fetchall()
-            for rows in conn:
-                print (rows[0])
-            # print(tabulate(rows, showindex=False, headers=['FNAME', 'LNAME', 'STUDENT_ID', 'TOTAL_PENALTY'], tablefmt='psql'))
+            print(tabulate(rows, showindex=False, headers=['FNAME', 'LNAME', 'STUDENT_ID', 'TOTAL_PENALTY'], tablefmt='psql'))
            
         except cx_Oracle.DatabaseError as er:
             print('There is error in the Oracle database:', er)
@@ -101,8 +100,22 @@ class sql_objects:
         try:
             conn.execute("SELECT fss.FNAME, TO_CHAR(fsb.REGISTERED_BOOK_ON, 'Q') AS 'QUARTER', fsb.GENRE, COUNT(*) FROM FALL22_S001_13_BOOKS fsb INNER JOIN FALL22_S001_13_STAFF fss ON fss.STAFF_ID = fsb.STAFF_ID GROUP BY TO_CHAR(fsb.REGISTERED_BOOK_ON, 'Q'), fss.FNAME, ROLLUP(fsb.GENRE) FETCH NEXT 10 ROWS ONLY") 
             rows = conn.fetchall()
-            print(tabulate(rows, showindex=False, headers=['FNAME','GENRE'],tablefmt='psql'))                          
+            col_names = [i[0] for i in conn.description]
+            print(tabulate(rows, showindex=False, headers=col_names,tablefmt='psql'))                          
            
+        except cx_Oracle.DatabaseError as er:
+            print('There is error in the Oracle database:', er)
+ 
+        except Exception as er:
+            print('Error:', er)
+
+    def getBooksBorrowedByName(self, conn):
+        book_name = input('Enter the book name you want to find: ')
+        try:
+            conn.execute("SELECT fsb.BOOK_ID, fsb.NAME, fsbr.DATE_OF_ISSUE FROM AXP2009.FALL22_S001_13_BOOKS fsb INNER JOIN AXP2009.FALL22_S001_13_BORROW_RECORD fsbr ON fsb.BOOK_ID = fsbr.BOOK_ID WHERE fsb.NAME = :book_name", {'book_name': book_name})
+            rows = conn.fetchall()
+            col_names = [i[0] for i in conn.description]
+            print(tabulate(rows, showindex=False, headers=col_names,tablefmt='psql'))  
         except cx_Oracle.DatabaseError as er:
             print('There is error in the Oracle database:', er)
  
@@ -132,7 +145,8 @@ while True:
         print("3. Show the name of the publisher who's books were most borrowed")  
         print("4. Show average over three rows (PRECEDING, CURRENT, FOLLOWING) for the late fee of books borrowed rounded upto 2 decimals ordered by DATE_OF_ISSUE")  
         print("5. Show the total late fee collected for every book that is borrowed for all dates along with its total cost per book")  
-        print("6. Show the count of books registered into the system by staff for every quarter of the year and by genre")  
+        print("6. Show the count of books registered into the system by staff for every quarter of the year and by genre")
+        print("7. Get information of books borrowed by name")  
         choice2 = int(input("\nPlease Enter the Choice for the business goals:"))
 
         if choice2 == 1:
@@ -151,7 +165,10 @@ while True:
             p1.getTotalLateFee(conn)
             
         elif choice2 == 6:
-            p1.getCountForQuarter(conn)    
+            p1.getCountForQuarter(conn)
+            
+        elif choice2 == 7:
+            p1.getBooksBorrowedByName(conn)    
             
         else:
             p1.close_connection(conn)
