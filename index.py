@@ -9,7 +9,7 @@ class sql_objects:
         conn = cx_Oracle.connect(user=connection_data['user_name'], password=connection_data['password'], dsn=dsn_tns)
         c = conn.cursor()
         print('connected')
-        return c
+        return c, conn
 
     def close_connection(self, conn):
         print('closing connection')
@@ -26,6 +26,26 @@ class sql_objects:
             conn.execute("SELECT * FROM AXP2009." + table_name + " FETCH FIRST 25 ROWS ONLY")
             rows = conn.fetchall()
             print(tabulate(rows, showindex=False, tablefmt='psql'))
+        except cx_Oracle.DatabaseError as er:
+            print('There is error in the Oracle database:', er)
+ 
+        except Exception as er:
+            print('Error:', er)
+
+    def delete_table_data(self, conn, table_name, attr_name, id,c):
+        try:
+            conn.execute("DELETE FROM AXP2009." + table_name + " WHERE "+ attr_name+"="+id)
+            c.commit()
+        except cx_Oracle.DatabaseError as er:
+            print('There is error in the Oracle database:', er)
+ 
+        except Exception as er:
+            print('Error:', er)
+    
+    def update_borrow_penalty(self, conn,id,count,c):
+        try:
+            conn.execute("UPDATE AXP2009.FALL22_S001_13_COPY SET COPY_COUNT="+count+" WHERE COPY_ID="+id)
+            c.commit()
         except cx_Oracle.DatabaseError as er:
             print('There is error in the Oracle database:', er)
  
@@ -111,7 +131,7 @@ class sql_objects:
 
 
 p1 = sql_objects()
-conn = p1.connect()
+conn,c = p1.connect()
 while True:
     print("\nMAIN MENU")  
     print("1. SHOW RELATIONS")  
@@ -123,7 +143,29 @@ while True:
         p1.get_table_names(conn)
         tbl_name = input('Enter the table name: ')
         p1.get_table_data(conn=conn, table_name=tbl_name)
+
+    elif choice1 == 2:
+        print("1. Delete a row from table")  
+        print("2. Modify the number of copies of a particular book in the library")
         
+        choice2 = int(input("\nPlease Enter the Choice for Modifying relations:"))
+
+        if choice2 == 1:
+            p1.get_table_names(conn)
+            tbl_name = input('Enter the table name: ')
+            attr_header = input('Enter the attribute Header: ')
+            Row_id = input('Enter the row ID: ')
+            p1.delete_table_data(conn, tbl_name,attr_header,Row_id,c)
+            pass
+
+        elif choice2 == 2:
+            # update_borrow_penalty(self, conn,id,count,c)
+            copy_id = input('Enter the Copy Id of the book: ')
+            copies = input('Enter the new number of copies of the book: ')
+            p1.update_borrow_penalty(conn,copy_id,copies,c)
+        else:
+            # p1.close_connection(conn)
+            break
 
     elif choice1 == 3:
         print("\nMENU FOR BUSINESS GOALS")  
