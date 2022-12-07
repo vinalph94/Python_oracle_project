@@ -37,6 +37,8 @@ class sql_objects:
         try:
             conn.execute("DELETE FROM AXP2009." + table_name + " WHERE "+ attr_name+"="+id)
             c.commit()
+            print('DELETED')
+            self.get_table_data(conn, table_name)
         except cx_Oracle.DatabaseError as er:
             print('There is error in the Oracle database:', er)
  
@@ -47,6 +49,8 @@ class sql_objects:
         try:
             conn.execute("UPDATE AXP2009.FALL22_S001_13_COPY SET COPY_COUNT="+count+" WHERE COPY_ID="+id)
             c.commit()
+            print('UPDATED')
+            self.get_table_data(conn, 'FALL22_S001_13_COPY')
         except cx_Oracle.DatabaseError as er:
             print('There is error in the Oracle database:', er)
  
@@ -118,7 +122,7 @@ class sql_objects:
 
     def getCountForQuarter(self,conn):
         try:
-            conn.execute("SELECT fss.FNAME, TO_CHAR(fsb.REGISTERED_BOOK_ON, 'Q') AS 'QUARTER', fsb.GENRE, COUNT(*) FROM FALL22_S001_13_BOOKS fsb INNER JOIN FALL22_S001_13_STAFF fss ON fss.STAFF_ID = fsb.STAFF_ID GROUP BY TO_CHAR(fsb.REGISTERED_BOOK_ON, 'Q'), fss.FNAME, ROLLUP(fsb.GENRE) FETCH NEXT 10 ROWS ONLY") 
+            conn.execute("SELECT fss.FNAME, TO_CHAR(fsb.REGISTERED_BOOK_ON, 'Q'), fsb.GENRE, COUNT(*) FROM FALL22_S001_13_BOOKS fsb INNER JOIN FALL22_S001_13_STAFF fss ON fss.STAFF_ID = fsb.STAFF_ID GROUP BY TO_CHAR(fsb.REGISTERED_BOOK_ON, 'Q'), fss.FNAME, ROLLUP(fsb.GENRE) FETCH NEXT 15 ROWS ONLY") 
             rows = conn.fetchall()
             col_names = [i[0] for i in conn.description]
             print(tabulate(rows, showindex=False, headers=col_names,tablefmt='psql'))                          
@@ -177,8 +181,8 @@ while True:
             copies = input('Enter the new number of copies of the book: ')
             p1.update_borrow_penalty(conn,copy_id,copies,c)
         else:
-            # p1.close_connection(conn)
-            break
+            print("Please enter the correct choice")
+            continue
 
     elif choice1 == 3:
         print("\nMENU FOR BUSINESS GOALS")  
@@ -208,13 +212,13 @@ while True:
             
         elif choice2 == 6:
             p1.getCountForQuarter(conn)
-            
+
         elif choice2 == 7:
             p1.getBooksBorrowedByName(conn)    
             
         else:
-            p1.close_connection(conn)
-            break
+            print("Please enter the correct choice")
+            continue
  
     else:
         p1.close_connection(conn)
